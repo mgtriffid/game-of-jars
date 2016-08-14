@@ -1,0 +1,13 @@
+{
+  "buckets": [
+    {
+      "capacity": 8
+    },
+    {
+      "capacity": 5
+    },
+    {
+      "capacity": 3
+    }
+  ]
+}

@@ -1,24 +1,33 @@
 package com.mgtriffid.gameofjars.activities
 
+import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.util.AttributeSet
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.LinearLayout
+import android.widget.*
 import android.widget.LinearLayout.HORIZONTAL
 import android.widget.LinearLayout.VERTICAL
-import android.widget.TableRow
+import com.google.gson.Gson
 import com.mgtriffid.gameofjars.R
+import com.mgtriffid.gameofjars.game.SavedState
+import org.apache.commons.io.IOUtils
+import java.io.FileNotFoundException
+import java.util.*
 
 class LevelsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_levels)
+        val savedState = try {
+            val savedStateString = IOUtils.toString(openFileInput("SavedState"), "UTF-8")
+            Gson().fromJson(savedStateString, SavedState::class.java)
+        } catch (fnfe: FileNotFoundException) {
+            SavedState(ArrayList(Array(25, { 0 }).asList()))
+        }
         val grid = LinearLayout(this)
         grid.orientation = VERTICAL
         grid.layoutParams = TableRow.LayoutParams(MATCH_PARENT, MATCH_PARENT, 1f)
@@ -28,8 +37,14 @@ class LevelsActivity : AppCompatActivity() {
             row.layoutParams = TableRow.LayoutParams(MATCH_PARENT, MATCH_PARENT, 1f)
             for (j in 1..5) {
                 val levelButton = Button(this)
-                levelButton.text = "${5 * i + j}"
+                val levelNumber = 5 * i + j
+                levelButton.text = "$levelNumber" + Array(savedState.levelsCompletion[levelNumber - 1], {"*"}).joinToString()
                 levelButton.layoutParams = TableRow.LayoutParams(MATCH_PARENT, MATCH_PARENT, 1f)
+                levelButton.setOnClickListener {
+                    val intent = Intent(this, GameActivity::class.java)
+                    intent.putExtra("levelNumber", levelNumber)
+                    startActivity(intent)
+                }
                 row.addView(levelButton)
             }
             grid.addView(row)
