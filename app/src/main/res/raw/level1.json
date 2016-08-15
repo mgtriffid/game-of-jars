@@ -1,13 +1,14 @@
 {
   "buckets": [
     {
-      "capacity": 8
+      "capacity": 1
     },
     {
-      "capacity": 5
-    },
-    {
-      "capacity": 3
+      "capacity": 10
     }
-  ]
+  ],
+  "winCondition": "SPECIFIC_VOLUME_IN_BUCKET",
+  "winConditionParameter": 2,
+  "threeStars": 4,
+  "twoStars": 10
 }

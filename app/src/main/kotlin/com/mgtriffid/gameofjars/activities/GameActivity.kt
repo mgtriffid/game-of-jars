@@ -2,11 +2,14 @@ package com.mgtriffid.gameofjars.activities
 
 import android.content.ClipData
 import android.content.ClipDescription
+import android.content.Context
+import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Point
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
 import android.view.DragEvent
 import android.view.MotionEvent
 import android.view.View
@@ -18,7 +21,9 @@ import android.widget.TextView.BufferType.SPANNABLE
 import com.google.gson.Gson
 import com.mgtriffid.gameofjars.R
 import com.mgtriffid.gameofjars.game.*
+import org.apache.commons.io.IOUtils
 import org.apache.commons.io.IOUtils.toString
+import org.apache.commons.lang3.mutable.MutableInt
 
 class GameActivity : AppCompatActivity() {
 
@@ -26,34 +31,65 @@ class GameActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game)
         val levelNumber = intent.extras.getInt("levelNumber")
+        startOnLevel(levelNumber)
+    }
+
+    private fun startOnLevel(levelNumber: Int) {
         val levelSettingsResources = resources.getIdentifier(
                 "level$levelNumber", "raw", packageName)
         val levelSettingsString = toString(resources.openRawResource(levelSettingsResources), "UTF-8")
         val levelSettings = Gson().fromJson(levelSettingsString, LevelSettings::class.java)
         val bucketsRow = findViewById(R.id.buckets) as LinearLayout
+        bucketsRow.removeAllViews()
+        val turns = MutableInt()
+        val transfuseCallback = {
+            turns.increment()
+            if (levelSettings.winCondition.satisfied(levelSettings.buckets, levelSettings.winConditionParameter)) {
+                if (turns.value <= levelSettings.threeStars) {
+                    levelComplete(levelNumber, 3)
+                } else if (turns.value <= levelSettings.twoStars) {
+                    levelComplete(levelNumber, 2)
+                } else {
+                    levelComplete(levelNumber, 1)
+                }
+            }
+        }
         levelSettings.buckets.forEach {
-            bucketsRow.addView(drawBucket(it))
+            bucketsRow.addView(drawBucket(it, transfuseCallback))
         }
         createSupplyDnd()
-        createSinkListener()
+        createSinkListener(transfuseCallback)
     }
 
-    private fun createSinkListener() {
+    private fun levelComplete(levelNumber: Int, stars: Int) {
+        Log.v("Level complete", "Stars $stars")
+        val savedStateString = IOUtils.toString(openFileInput("SavedState"), "UTF-8")
+        val savedState = Gson().fromJson(savedStateString, SavedState::class.java)
+        savedState.levelsCompletion[levelNumber - 1] = stars
+        IOUtils.write(Gson().toJson(savedState), openFileOutput("SavedState", Context.MODE_PRIVATE), "UTF-8")
+        val intent = Intent(this, javaClass)
+        intent.putExtra("levelNumber", levelNumber + 1)
+        intent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        startActivity(intent)
+        finish()
+    }
+
+    private fun createSinkListener(transfuseCallback: () -> Unit) {
         val sink = findViewById(R.id.sink)
-        sink.setOnDragListener(dragDropListener({ }, Sink))
+        sink.setOnDragListener(dragDropListener({ }, Sink, transfuseCallback))
     }
 
-    private fun drawBucket(it: Bucket) : View {
+    private fun drawBucket(it: Bucket, transfuseCallback: () -> Unit) : View {
         val bucketTextField = TextView(this)
         bucketTextField.layoutParams = LayoutParams(MATCH_PARENT, MATCH_PARENT, 1f)
         val callback = { bucketTextField.setText("${it.occupied} / ${it.capacity}", SPANNABLE) }
-        bucketTextField.setOnDragListener(dragDropListener(callback, it))
+        bucketTextField.setOnDragListener(dragDropListener(callback, it, transfuseCallback))
         bucketTextField.setOnTouchListener(onTouchListener(it, callback))
         callback()
         return bucketTextField
     }
 
-    private fun dragDropListener(dropCallback: () -> Unit, consumer: Consumer): (View, DragEvent) -> Boolean {
+    private fun dragDropListener(dropCallback: () -> Unit, consumer: Consumer, transfuseCallback: () -> Unit): (View, DragEvent) -> Boolean {
         return { view, dragEvent ->
             when (dragEvent.action) {
                 DragEvent.ACTION_DRAG_STARTED -> true
@@ -62,6 +98,7 @@ class GameActivity : AppCompatActivity() {
                     transfuse(dragFlow.source, consumer)
                     dragFlow.callback()
                     dropCallback()
+                    transfuseCallback()
                     true
                 }
                 else -> false

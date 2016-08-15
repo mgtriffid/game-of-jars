@@ -1,11 +1,9 @@
 package com.mgtriffid.gameofjars.activities
 
+import android.content.Context
 import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
-import android.util.AttributeSet
-import android.view.ViewGroup
-import android.view.ViewGroup.LayoutParams
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.*
 import android.widget.LinearLayout.HORIZONTAL
@@ -26,7 +24,9 @@ class LevelsActivity : AppCompatActivity() {
             val savedStateString = IOUtils.toString(openFileInput("SavedState"), "UTF-8")
             Gson().fromJson(savedStateString, SavedState::class.java)
         } catch (fnfe: FileNotFoundException) {
-            SavedState(ArrayList(Array(25, { 0 }).asList()))
+            val newState = SavedState(ArrayList(Array(25, { 0 }).asList()))
+            IOUtils.write(Gson().toJson(newState), openFileOutput("SavedState", Context.MODE_PRIVATE), "UTF-8")
+            newState
         }
         val grid = LinearLayout(this)
         grid.orientation = VERTICAL
