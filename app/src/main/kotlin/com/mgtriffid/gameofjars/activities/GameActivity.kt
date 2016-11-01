@@ -69,9 +69,8 @@ class GameActivity : AppCompatActivity() {
         IOUtils.write(Gson().toJson(savedState), openFileOutput("SavedState", Context.MODE_PRIVATE), "UTF-8")
         val intent = Intent(this, javaClass)
         intent.putExtra("levelNumber", levelNumber + 1)
-        intent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
         startActivity(intent)
-        finish()
     }
 
     private fun createSinkListener(transfuseCallback: () -> Unit) {
